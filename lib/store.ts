@@ -1,6 +1,6 @@
 "use client"
 
-import { useSyncExternalStore, useCallback } from "react"
+import { useSyncExternalStore } from "react"
 import {
   currentUser,
   transactions as initialTransactions,
@@ -44,7 +44,12 @@ export type ChatMessage = {
 }
 
 type StoreState = {
-  balance: number
+  /** Funds the user can withdraw or invest */
+  available: number
+  /** Funds currently locked in active investment plans */
+  invested: number
+  /** Cumulative profit earned from investments */
+  returns: number
   transactions: Transaction[]
   withdrawals: Withdrawal[]
   activeInvestments: ActiveInvestment[]
@@ -54,10 +59,19 @@ type StoreState = {
   notifications: number
 }
 
+// ── Derived helpers ──────────────────────────────────────────────────
+
+/** Total balance across all three buckets */
+export function totalBalance(s: StoreState) {
+  return s.available + s.invested
+}
+
 // ── Singleton store ──────────────────────────────────────────────────
 
 let state: StoreState = {
-  balance: currentUser.balance,
+  available: currentUser.balance,
+  invested: 0,
+  returns: 0,
   transactions: [...initialTransactions],
   withdrawals: [],
   activeInvestments: [],
@@ -120,7 +134,7 @@ export function submitWithdrawal(data: {
 
   state = {
     ...state,
-    balance: state.balance - data.amount,
+    available: state.available - data.amount,
     withdrawals: [withdrawal, ...state.withdrawals],
     transactions: [tx, ...state.transactions],
   }
@@ -146,7 +160,7 @@ export function rejectWithdrawal(id: string) {
   const wd = state.withdrawals.find((w) => w.id === id)
   state = {
     ...state,
-    balance: wd ? state.balance + wd.amount : state.balance,
+    available: wd ? state.available + wd.amount : state.available,
     withdrawals: state.withdrawals.map((w) =>
       w.id === id ? { ...w, status: "rejected" as const } : w
     ),
@@ -171,7 +185,7 @@ function parseDuration(duration: string): number {
 export function submitInvestment(planId: string, amount: number) {
   const plan = state.investmentPlans.find((p) => p.id === planId)
   if (!plan) return
-  if (amount > state.balance) return
+  if (amount > state.available) return // can only invest from available
 
   const now = Date.now()
   const investment: ActiveInvestment = {
@@ -200,17 +214,28 @@ export function submitInvestment(planId: string, amount: number) {
 
   state = {
     ...state,
-    balance: state.balance - amount,
+    available: state.available - amount, // deduct from available
+    invested: state.invested + amount, // lock in invested
     activeInvestments: [...state.activeInvestments, investment],
     transactions: [tx, ...state.transactions],
   }
   emitChange()
 }
 
-// Called every 30 minutes (or on demand) to accrue returns
+/**
+ * Called every 30 minutes to accrue returns.
+ *
+ * - Profit is added to both `returns` (cumulative tracker) and `available`
+ *   (so the user can withdraw or re-invest profits).
+ * - When a plan completes, the principal moves from `invested` back to
+ *   `available`.
+ * - Invested funds are never directly withdrawable.
+ */
 export function accrueReturns() {
   const now = Date.now()
-  let balanceDelta = 0
+  let availableDelta = 0
+  let investedDelta = 0
+  let returnsDelta = 0
   const newTxs: Transaction[] = []
 
   const updatedInvestments = state.activeInvestments.map((inv) => {
@@ -243,7 +268,10 @@ export function accrueReturns() {
     }
 
     if (accrual > 0) {
-      balanceDelta += accrual
+      // Profit goes to returns (cumulative) AND available (spendable)
+      returnsDelta += accrual
+      availableDelta += accrual
+
       newTxs.push({
         id: `t-ret-${now}-${inv.id}`,
         userId: "u1",
@@ -256,8 +284,10 @@ export function accrueReturns() {
     }
 
     if (isComplete) {
-      // Return the principal
-      balanceDelta += inv.amount
+      // Principal moves from invested back to available
+      investedDelta -= inv.amount
+      availableDelta += inv.amount
+
       newTxs.push({
         id: `t-principal-${now}-${inv.id}`,
         userId: "u1",
@@ -277,10 +307,12 @@ export function accrueReturns() {
     }
   })
 
-  if (balanceDelta > 0 || newTxs.length > 0) {
+  if (availableDelta !== 0 || investedDelta !== 0 || newTxs.length > 0) {
     state = {
       ...state,
-      balance: Math.round((state.balance + balanceDelta) * 100) / 100,
+      available: Math.round((state.available + availableDelta) * 100) / 100,
+      invested: Math.round((state.invested + investedDelta) * 100) / 100,
+      returns: Math.round((state.returns + returnsDelta) * 100) / 100,
       activeInvestments: updatedInvestments,
       transactions: [...newTxs, ...state.transactions],
     }
@@ -340,8 +372,8 @@ export function sendChatMessage(text: string) {
   }, 1500)
 }
 
-export function setBalance(newBalance: number) {
-  state = { ...state, balance: newBalance }
+export function setAvailable(amount: number) {
+  state = { ...state, available: amount }
   emitChange()
 }
 

@@ -40,7 +40,7 @@ export default function WithdrawPage() {
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const maxAmount = store.balance
+  const maxAmount = store.available
 
   const handleMax = () => {
     setAmount(maxAmount.toString())

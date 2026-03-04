@@ -83,7 +83,7 @@ export default function PlansPage() {
       setError(`Maximum investment for this plan is $${selectedPlan.maxAmount.toLocaleString()}.`)
       return
     }
-    if (amount > store.balance) {
+    if (amount > store.available) {
       setError("Insufficient balance. You cannot invest more than your available balance.")
       return
     }
@@ -285,7 +285,7 @@ export default function PlansPage() {
                     </span>
                   </div>
                   <span className="text-sm font-bold text-foreground">
-                    ${store.balance.toLocaleString(undefined, {
+                    ${store.available.toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
@@ -333,10 +333,9 @@ export default function PlansPage() {
                         min={selectedPlan?.minAmount}
                         max={Math.min(
                           selectedPlan?.maxAmount ?? 0,
-                          store.balance
+                          store.available
                         )}
-                        step={0.01}
-                      />
+                      </Button>
                     </div>
                     <Button
                       variant="outline"
@@ -345,7 +344,7 @@ export default function PlansPage() {
                         setInvestAmount(
                           Math.min(
                             selectedPlan?.maxAmount ?? 0,
-                            store.balance
+                            store.available
                           ).toString()
                         )
                       }
