@@ -5,7 +5,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { allUsers, transactions } from "@/lib/mock-data"
-import { Users, DollarSign, Clock, TrendingUp } from "lucide-react"
+import { Users, DollarSign, Clock, TrendingUp, ArrowUpFromLine } from "lucide-react"
 import Link from "next/link"
 
 export default function AdminOverviewPage() {

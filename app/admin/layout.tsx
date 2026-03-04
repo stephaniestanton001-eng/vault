@@ -12,6 +12,8 @@ import {
   X,
   ShieldCheck,
   Wallet,
+  ArrowUpFromLine,
+  TrendingUp,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -23,6 +25,8 @@ const navItems = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/users", label: "Manage Users", icon: Users },
   { href: "/admin/transactions", label: "Transactions", icon: History },
+  { href: "/admin/withdrawals", label: "Withdrawals", icon: ArrowUpFromLine },
+  { href: "/admin/plans", label: "Investment Plans", icon: TrendingUp },
   { href: "/admin/wallets", label: "Wallets", icon: Wallet },
 ]
 

@@ -1,17 +1,30 @@
+"use client"
+
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { currentUser } from "@/lib/mock-data"
+import { useStore } from "@/lib/store"
 import { ArrowUpRight, ArrowDownRight, Wallet } from "lucide-react"
 
 export function BalanceCard() {
+  const store = useStore()
+
   const formattedBalance = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-  }).format(currentUser.balance)
+  }).format(store.balance)
+
+  const totalInvested = store.activeInvestments
+    .filter((i) => !i.completed)
+    .reduce((sum, i) => sum + i.amount, 0)
+  const totalReturns = store.activeInvestments.reduce(
+    (sum, i) => sum + i.accruedReturn,
+    0
+  )
+  const available = store.balance
 
   return (
     <Card className="md:col-span-2 lg:col-span-2">
@@ -28,30 +41,36 @@ export function BalanceCard() {
         <div className="mt-3 flex items-center gap-4">
           <div className="flex items-center gap-1 text-sm">
             <ArrowUpRight className="h-3.5 w-3.5 text-accent" />
-            <span className="text-accent">+$12,450</span>
-            <span className="text-muted-foreground">this month</span>
+            <span className="text-accent">
+              +${totalReturns.toFixed(2)}
+            </span>
+            <span className="text-muted-foreground">returns</span>
           </div>
           <div className="flex items-center gap-1 text-sm">
             <ArrowDownRight className="h-3.5 w-3.5 text-destructive" />
-            <span className="text-destructive">-$3,000</span>
-            <span className="text-muted-foreground">withdrawn</span>
+            <span className="text-destructive">
+              ${totalInvested.toLocaleString()}
+            </span>
+            <span className="text-muted-foreground">invested</span>
           </div>
         </div>
         <div className="mt-4 grid grid-cols-3 gap-4 border-t border-border pt-4">
           <div>
             <p className="text-xs text-muted-foreground">Invested</p>
             <p className="text-sm font-semibold text-card-foreground">
-              $35,000
+              ${totalInvested.toLocaleString()}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Returns</p>
-            <p className="text-sm font-semibold text-accent">$4,250.75</p>
+            <p className="text-sm font-semibold text-accent">
+              ${totalReturns.toFixed(2)}
+            </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Available</p>
             <p className="text-sm font-semibold text-card-foreground">
-              $9,000
+              ${available.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           </div>
         </div>

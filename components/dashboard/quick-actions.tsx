@@ -29,9 +29,11 @@ export function QuickActions() {
             Deposit Funds
           </Link>
         </Button>
-        <Button variant="outline" className="w-full justify-start">
-          <ArrowDownRight className="mr-2 h-4 w-4 text-muted-foreground" />
-          Withdraw
+        <Button variant="outline" className="w-full justify-start" asChild>
+          <Link href="/dashboard/withdraw">
+            <ArrowDownRight className="mr-2 h-4 w-4 text-muted-foreground" />
+            Withdraw
+          </Link>
         </Button>
       </CardContent>
     </Card>

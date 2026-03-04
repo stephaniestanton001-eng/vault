@@ -11,16 +11,22 @@ import {
   Menu,
   X,
   ArrowDownToLine,
+  ArrowUpFromLine,
+  Bell,
+  MessageCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { currentUser } from "@/lib/mock-data"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useStore, accrueReturns, toggleChat } from "@/lib/store"
+import { LiveChat } from "@/components/dashboard/live-chat"
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/deposit", label: "Deposit", icon: ArrowDownToLine },
+  { href: "/dashboard/withdraw", label: "Withdraw", icon: ArrowUpFromLine },
   { href: "/dashboard/transactions", label: "Transactions", icon: History },
   { href: "/dashboard/plans", label: "Investment Plans", icon: TrendingUp },
 ]
@@ -32,6 +38,18 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const store = useStore()
+
+  // Accrue investment returns every 30 minutes
+  useEffect(() => {
+    accrueReturns() // run once on mount
+    const interval = setInterval(accrueReturns, 30 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const pendingWithdrawals = store.withdrawals.filter(
+    (w) => w.status === "pending"
+  ).length
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -57,8 +75,27 @@ export default function DashboardLayout({
             >
               <item.icon className="h-4 w-4" />
               {item.label}
+              {item.label === "Withdraw" && pendingWithdrawals > 0 && (
+                <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-warning px-1.5 text-[10px] font-bold text-warning-foreground">
+                  {pendingWithdrawals}
+                </span>
+              )}
             </Link>
           ))}
+
+          {/* Live Chat button */}
+          <button
+            onClick={() => toggleChat()}
+            className="relative mt-2 flex items-center gap-3 rounded-lg border border-dashed border-border px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <MessageCircle className="h-4 w-4" />
+            Customer Support
+            {store.notifications > 0 && (
+              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] font-bold text-accent-foreground">
+                {store.notifications}
+              </span>
+            )}
+          </button>
         </nav>
         <div className="border-t border-border p-4">
           <div className="flex items-center gap-3">
@@ -99,17 +136,32 @@ export default function DashboardLayout({
             </div>
             <span className="font-semibold text-foreground">Vault</span>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => toggleChat()}
+              className="relative"
+            >
+              <MessageCircle className="h-5 w-5" />
+              {store.notifications > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[9px] font-bold text-accent-foreground">
+                  {store.notifications}
+                </span>
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
         </header>
 
         {/* Mobile Navigation */}
@@ -130,6 +182,11 @@ export default function DashboardLayout({
                 >
                   <item.icon className="h-4 w-4" />
                   {item.label}
+                  {item.label === "Withdraw" && pendingWithdrawals > 0 && (
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-warning px-1.5 text-[10px] font-bold text-warning-foreground">
+                      {pendingWithdrawals}
+                    </span>
+                  )}
                 </Link>
               ))}
               <Link
@@ -146,6 +203,9 @@ export default function DashboardLayout({
         {/* Main content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-8">{children}</main>
       </div>
+
+      {/* Live Chat Widget */}
+      <LiveChat />
     </div>
   )
 }
